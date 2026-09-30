@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# claude-pet: control the Claude Code desktop pet
+#   start | stop | toggle | status | species [NAME] | size [small|medium|large|0.4-2.0] | usage [on|off]
+#   add NAME IMAGE [--meter WORD] | remove NAME
+PET_DIR="$HOME/.claude/pet"
+
+running() { [ -f "$PET_DIR/pet.pid" ] && kill -0 "$(cat "$PET_DIR/pet.pid")" 2>/dev/null; }
+
+start() {
+  rm -f "$PET_DIR/disabled"
+  if running; then echo "pet is already out"; return; fi
+  if [ -z "$DISPLAY$WAYLAND_DISPLAY" ]; then echo "no desktop display here (SSH?)"; return 1; fi
+  setsid python3 "$PET_DIR/pet.py" >/dev/null 2>&1 < /dev/null &
+  echo "pet summoned"
+}
+
+stop() {
+  touch "$PET_DIR/disabled"   # keep hooks from auto-summoning it again
+  if running; then kill "$(cat "$PET_DIR/pet.pid")"; echo "pet put away"; else echo "pet is not out"; fi
+}
+
+restart_if_running() {
+  if running; then kill "$(cat "$PET_DIR/pet.pid")"; sleep 0.3; start >/dev/null; fi
+}
+
+set_config() {  # set_config KEY JSON_VALUE
+  python3 - "$1" "$2" <<'PY'
+import json, os, sys
+p = os.path.expanduser("~/.claude/pet/config.json")
+try:
+    cfg = json.load(open(p))
+except Exception:
+    cfg = {}
+cfg[sys.argv[1]] = json.loads(sys.argv[2])
+json.dump(cfg, open(p, "w"))
+PY
+}
+
+case "${1:-toggle}" in
+  start) start ;;
+  stop) stop ;;
+  toggle) if running; then stop; else start; fi ;;
+  status)
+    if running; then echo "pet is out"; else echo "pet is away"; fi
+    ls "$PET_DIR/sessions" 2>/dev/null | grep -c '\.json$' | xargs echo "tracked sessions:" ;;
+  species)
+    all=$(python3 "$PET_DIR/pet.py" --list-species)
+    if [ -z "$2" ]; then echo "species: $all"; exit 0; fi
+    case " $all " in *" $2 "*) ;; *) echo "choose one of: $all"; exit 1 ;; esac
+    set_config species "\"$2\""
+    restart_if_running
+    echo "your pet is now a $2" ;;
+  size)
+    case "$2" in
+      small) v=0.6 ;; medium) v=0.75 ;; large) v=1.0 ;;
+      "") echo "usage: claude-pet size small|medium|large|<0.4-2.0>"; exit 1 ;;
+      *) v="$2" ;;
+    esac
+    if ! python3 -c "import sys; v=float(sys.argv[1]); sys.exit(not 0.4 <= v <= 2.0)" "$v" 2>/dev/null; then
+      echo "size must be small, medium, large or a number from 0.4 to 2.0"; exit 1
+    fi
+    set_config scale "$v"
+    restart_if_running
+    echo "pet size set to $v" ;;
+  usage)
+    case "$2" in
+      on) set_config show_usage true ;;
+      off) set_config show_usage false ;;
+      *) echo "usage: claude-pet usage on|off"; exit 1 ;;
+    esac
+    restart_if_running
+    echo "usage box turned $2" ;;
+  add)
+    shift
+    python3 "$PET_DIR/custom.py" add "$@" || exit 1
+    set_config species "\"$1\""
+    restart_if_running
+    echo "your pet is now $1" ;;
+  remove)
+    python3 "$PET_DIR/custom.py" remove "$2" || exit 1
+    if python3 -c "import json,sys; sys.exit(json.load(open('$PET_DIR/config.json')).get('species') != sys.argv[1])" "$2" 2>/dev/null; then
+      set_config species '"blob"'; restart_if_running
+    fi ;;
+  *) echo "usage: claude-pet [start|stop|toggle|status|species [NAME]|size SIZE|usage on|off|add NAME IMAGE|remove NAME]"; exit 1 ;;
+esac
