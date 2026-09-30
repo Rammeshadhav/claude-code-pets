@@ -62,8 +62,6 @@ This stops the pet and removes its hooks (keeping yours), gives back any status 
 
 ![Pet states](docs/preview.png)
 
-![Session list and usage box](docs/usage.png)
-
 > Unofficial community project. Not affiliated with Anthropic or OpenAI.
 
 ## Features
@@ -130,9 +128,9 @@ Claude Code only shares plan usage with status line commands, so the installer r
 ### Several sessions at once
 
 ```
-● Rover McCue sensors launch…   rammesh           needs you!   ← highlighted, pulsing
-● Pets like codex pets          claude-code-pet   running...
-● update README topics          rover_ws          all done
+● Fix the login bug             web-app           needs you!   ← highlighted, pulsing
+● Add dark mode                 web-app           running...
+● Write API docs                api-server        all done
 ```
 
 Each row is named by the **session title**, the same name Claude Code shows for the session (its automatic title, or the one you set with `/rename` or `--name`). The folder follows in grey, then the status. Click a row to clear its "all done". Closed or killed terminals drop off the list within a few seconds.
