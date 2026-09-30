@@ -46,8 +46,6 @@ This stops the pet and removes its hooks (keeping your others), gives back any s
 
 ![Pet states](docs/preview.png)
 
-![Session list and usage box](docs/usage.png)
-
 > Unofficial community project. Not affiliated with Anthropic or OpenAI.
 
 ## Features
@@ -79,9 +77,9 @@ This stops the pet and removes its hooks (keeping your others), gives back any s
 With two or more Claude Code sessions open, a list appears under the pet, most urgent first:
 
 ```
-● Rover McCue sensors launch…   rammesh           needs you!   ← highlighted, pulsing
-● Pets like codex pets          claude-code-pet   running...
-● update README topics          rover_ws          all done
+● Fix the login bug             web-app           needs you!   ← highlighted, pulsing
+● Add dark mode                 web-app           running...
+● Write API docs                api-server        all done
 ```
 
 Each row is named by the **session title**, the same name Claude Code shows for the session (its automatic title, or the one you set with `/rename` or `--name`). The folder follows in grey, then the status. A brand-new session without a title yet shows your latest request instead. Click a row to clear its "all done", or click the pet to clear them all. Closed or killed terminals drop off the list within a few seconds. Turn the list off with right-click → **Show all sessions**.
