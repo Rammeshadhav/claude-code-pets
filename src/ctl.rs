@@ -1,7 +1,6 @@
 //! Command-line control: start/stop/status/species/size and install/uninstall.
 
-use crate::custom;
-use crate::pets::{all_species, SPECIES};
+use crate::pets::all_species;
 use crate::state::{claude_dir, home, pet_dir, sess_dir, write_atomic, Config};
 use serde_json::{json, Value};
 use std::fs::{self, OpenOptions};
@@ -159,69 +158,6 @@ fn usage_box(arg: Option<&str>) -> i32 {
     cfg.save();
     restart_if_running();
     println!("usage box turned {}", if on { "on" } else { "off" });
-    0
-}
-
-/// `claude-pet add NAME IMAGE [--meter WORD]`
-fn add(args: &[String]) -> i32 {
-    let (Some(name), Some(image)) = (args.first(), args.get(1)) else {
-        println!("usage: claude-pet add NAME IMAGE [--meter WORD]");
-        return 1;
-    };
-    if !custom::valid_name(name) {
-        println!("pet names use lowercase letters, digits and '-' (up to 32)");
-        return 1;
-    }
-    if SPECIES.contains(&name.as_str()) {
-        println!("'{name}' is a built-in pet; pick another name");
-        return 1;
-    }
-    let meter = args
-        .iter()
-        .position(|a| a == "--meter")
-        .and_then(|i| args.get(i + 1))
-        .map(String::as_str)
-        .unwrap_or("Energy");
-    // GDK must be initialised to decode images; no window is opened
-    let _ = gtk::gdk_pixbuf::Pixbuf::formats();
-    match custom::add(name, std::path::Path::new(image), meter) {
-        Ok(meta) => {
-            let how = if meta.mode == "card" {
-                "busy background, shown as a portrait card"
-            } else {
-                "background removed"
-            };
-            println!("added '{name}' ({how})");
-            let mut cfg = Config::load();
-            cfg.species = Some(name.clone());
-            cfg.save();
-            restart_if_running();
-            println!("your pet is now {name}");
-            0
-        }
-        Err(e) => {
-            println!("could not add '{name}': {e}");
-            1
-        }
-    }
-}
-
-fn remove(name: Option<&str>) -> i32 {
-    let Some(name) = name.filter(|n| custom::valid_name(n)) else {
-        println!("usage: claude-pet remove NAME");
-        return 1;
-    };
-    if !custom::remove(name) {
-        println!("no image pet called '{name}'");
-        return 1;
-    }
-    let mut cfg = Config::load();
-    if cfg.species.as_deref() == Some(name) {
-        cfg.species = None;
-        cfg.save();
-        restart_if_running();
-    }
-    println!("removed '{name}'");
     0
 }
 
@@ -457,8 +393,6 @@ pub fn main(cmd: &str, args: &[String]) -> i32 {
         "species" => species(arg),
         "size" => size(arg),
         "usage" => usage_box(arg),
-        "add" => add(args),
-        "remove" => remove(arg),
         "install" => install(args),
         "uninstall" => uninstall(),
         _ => 1,

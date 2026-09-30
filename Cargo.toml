@@ -1,6 +1,6 @@
 [package]
 name = "claude-pet"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 rust-version = "1.70"
 description = "A tiny animated desktop companion that shows what Claude Code is doing"

@@ -172,7 +172,7 @@ impl Config {
             .ok()
             .and_then(|t| serde_json::from_str(&t).ok())
             .unwrap_or_default();
-        // pets renamed in 0.2
+        // pets renamed in 0.2 and 0.3
         let renamed = match cfg.species.as_deref() {
             Some("sharingan") => Some("crimson"),
             Some("rinnegan") => Some("ripple"),
@@ -180,6 +180,7 @@ impl Config {
             Some("minato") => Some("flash"),
             Some("hinata") => Some("lavender"),
             Some("pokeball") => Some("blob"),
+            Some("miti") => Some("robot"),
             _ => None,
         };
         if let Some(new) = renamed {

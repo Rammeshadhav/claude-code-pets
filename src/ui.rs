@@ -8,14 +8,11 @@
 //! state changes show up instantly without polling; text is rendered once into
 //! cached surfaces; the frame rate adapts to the state.
 
-use crate::custom::{self, Meta};
 use crate::pets::{self, all_species, PX};
 use crate::state::{self, now, pet_dir, read_sessions, sess_dir, status_phrase, Config, Session};
 use crate::usage::{self, Window};
 use gtk::cairo::{self, Context, Format, ImageSurface, Operator};
 use gtk::gio::prelude::*;
-use gtk::gdk::prelude::GdkContextExt;
-use gtk::gdk_pixbuf::Pixbuf;
 use gtk::prelude::*;
 use gtk::{gdk, gio, glib, pango};
 use std::cell::RefCell;
@@ -53,7 +50,7 @@ fn usage_theme(species: &str) -> (&'static str, Rgb) {
         "spiral" => ("Chakra", (0.35, 0.68, 1.0)),
         "flash" => ("Chakra", (1.0, 0.85, 0.3)),
         "lavender" => ("Chakra", (0.78, 0.68, 0.98)),
-        "miti" => ("Battery", (0.36, 0.72, 1.0)),
+        "robot" => ("Battery", (0.36, 0.72, 1.0)),
         "cat" => ("Energy", (0.98, 0.7, 0.36)),
         "crab" => ("Energy", (0.95, 0.5, 0.4)),
         "ghost" => ("Energy", (0.82, 0.78, 0.98)),
@@ -164,8 +161,6 @@ struct Pet {
     label_layer: Option<Layer>,
     list_layer: Option<Layer>,
     usage_layer: Option<Layer>,
-    /// the loaded image pet, if the species is one
-    custom: Option<(String, Pixbuf, Meta)>,
     usage: Vec<Window>,
     usage_top: f64,
     menu: Option<gtk::Menu>,
@@ -260,7 +255,6 @@ fn build() -> Shared {
         label_layer: None,
         list_layer: None,
         usage_layer: None,
-        custom: None,
         usage: Vec::new(),
         usage_top: H,
         menu: None,
@@ -628,9 +622,7 @@ impl Pet {
             _ => (t * 0.08).sin() * 2.0,
         };
 
-        if self.custom_pet().is_some() {
-            self.draw_custom(cr, bob, asleep);
-        } else if pets::is_vector(&self.species) {
+        if pets::is_vector(&self.species) {
             let r = 44.0;
             let (cx, cy) = (W / 2.0 - 14.0, H - r - 36.0 + bob * 0.5);
             shadow(cr, cx, H - 28.0, r * 0.85, 0.22);
@@ -947,107 +939,9 @@ impl Pet {
         }
     }
 
-    /// The current species as an image pet, loaded on first use.
-    fn custom_pet(&mut self) -> Option<&(String, Pixbuf, Meta)> {
-        if self.custom.as_ref().map(|c| c.0 != self.species).unwrap_or(true) {
-            self.custom = custom::load(&self.species).map(|(pb, meta)| (self.species.clone(), pb, meta));
-        }
-        self.custom.as_ref()
-    }
-
-    /// Your own artwork, untouched; the state shows in its aura, motion and bubble.
-    fn draw_custom(&mut self, cr: &Context, bob: f64, asleep: bool) {
-        let Some((_, pb, meta)) = self.custom_pet().cloned() else { return };
-        let (t, state) = (self.t, self.state.clone());
-        let card = meta.mode == "card";
-        let (iw, ih) = (pb.width() as f64, pb.height() as f64);
-        let mut s = (if card { 112.0 } else { 124.0 }) / ih;
-        if iw * s > 150.0 {
-            s = 150.0 / iw;
-        }
-        let (w, h) = (iw * s, ih * s);
-        let waiting = state == "waiting" && !asleep;
-        let shake = if waiting { (t * 1.3).sin() * 2.5 } else { 0.0 };
-        let breathe = if state == "idle" && !asleep { 1.0 + 0.012 * (t * 0.08).sin() } else { 1.0 };
-        let cx = W / 2.0 - 14.0 + shake;
-        let (x, y) = (cx - w / 2.0, H - 30.0 - h + bob);
-
-        shadow(cr, W / 2.0 - 14.0, H - 28.0, w * 0.42, 0.22);
-
-        // aura in the state's colour (the pet's own colour when idle)
-        if !asleep {
-            let (rgb, alpha) = match state.as_str() {
-                "working" => ((0.36, 0.62, 1.0), 0.28 + 0.12 * (t * 0.3).sin()),
-                "waiting" => ((1.0, 0.3, 0.3), 0.45 + 0.2 * (t * 0.6).sin()),
-                "done" => ((0.3, 0.9, 0.5), 0.4),
-                _ => ((meta.accent[0], meta.accent[1], meta.accent[2]), 0.16),
-            };
-            let (gx, gy, gr) = (cx, y + h * 0.5, w.max(h) * 0.62);
-            let g = cairo::RadialGradient::new(gx, gy, gr * 0.15, gx, gy, gr);
-            g.add_color_stop_rgba(0.0, rgb.0, rgb.1, rgb.2, alpha);
-            g.add_color_stop_rgba(1.0, rgb.0, rgb.1, rgb.2, 0.0);
-            let _ = cr.set_source(&g);
-            let _ = cr.save();
-            cr.translate(gx, gy);
-            cr.scale(1.0, h / w.max(h) * 1.05);
-            cr.arc(0.0, 0.0, gr, 0.0, TAU);
-            let _ = cr.restore();
-            let _ = cr.fill();
-        }
-
-        // the artwork, breathing gently around its feet
-        let _ = cr.save();
-        cr.translate(x + w / 2.0, y + h);
-        cr.scale(breathe, breathe);
-        cr.translate(-w / 2.0, -h);
-        if card {
-            rounded_rect(cr, 0.0, 0.0, w, h, 10.0);
-            cr.clip();
-        }
-        cr.scale(s, s);
-        cr.set_source_pixbuf(&pb, 0.0, 0.0);
-        cr.source().set_filter(cairo::Filter::Good);
-        let _ = cr.paint_with_alpha(if asleep { 0.5 } else { 1.0 });
-        let _ = cr.restore();
-        if card {
-            let (bc, ba) = match state.as_str() {
-                "waiting" if !asleep => ((1.0, 0.35, 0.35), 0.6 + 0.4 * (t * 0.6).sin()),
-                "working" if !asleep => ((0.45, 0.7, 1.0), 0.9),
-                "done" if !asleep => ((0.35, 0.9, 0.5), 0.9),
-                _ => ((1.0, 1.0, 1.0), 0.85),
-            };
-            rounded_rect(cr, x, y, w, h, 10.0);
-            cr.set_source_rgba(bc.0, bc.1, bc.2, ba);
-            cr.set_line_width(2.5);
-            let _ = cr.stroke();
-        }
-
-        // finished: a few twinkling stars
-        if state == "done" && !asleep {
-            for k in 0..3 {
-                let ph = (t * 0.08 + k as f64 / 3.0).rem_euclid(1.0);
-                let (sx, sy) = (x + w * [0.1, 0.9, 0.2][k] , y + h * [0.15, 0.3, 0.55][k] - ph * 8.0);
-                twinkle(cr, sx, sy, 3.5 * (1.0 - ph) + 1.0, 1.0 - ph);
-            }
-        }
-        self.draw_bubble(cr, x + w - 6.0, y + 10.0, asleep);
-    }
-
     /// Plan usage as themed meters: what's left in the 5-hour and weekly windows.
     fn draw_usage(&mut self, cr: &Context, top: f64) {
-        let (term, accent) = match self.custom_pet() {
-            Some((_, _, meta)) => {
-                let term: &'static str = match meta.meter.as_str() {
-                    "Chakra" => "Chakra",
-                    "Battery" => "Battery",
-                    "HP" => "HP",
-                    "Mana" => "Mana",
-                    _ => "Energy",
-                };
-                (term, (meta.accent[0], meta.accent[1], meta.accent[2]))
-            }
-            None => usage_theme(&self.species),
-        };
+        let (term, accent) = usage_theme(&self.species);
         let rows = self.usage.clone();
         let (x0, w) = (6.0, self.cw - 12.0);
         let h = USAGE_PAD * 2.0 + rows.len().max(1) as f64 * USAGE_ROW;
@@ -1207,18 +1101,6 @@ fn refill_icon(cr: &Context, x: f64, y: f64) {
     cr.move_to(ax + 1.8, ay - 0.6);
     cr.line_to(ax - 0.3, ay + 1.9);
     cr.line_to(ax - 0.9, ay - 1.2);
-    cr.close_path();
-    let _ = cr.fill();
-}
-
-fn twinkle(cr: &Context, x: f64, y: f64, r: f64, a: f64) {
-    cr.set_source_rgba(1.0, 0.9, 0.35, a);
-    cr.move_to(x, y - r);
-    for i in 1..8 {
-        let rr = if i % 2 == 0 { r } else { r * 0.3 };
-        let ang = -PI / 2.0 + i as f64 * PI / 4.0;
-        cr.line_to(x + rr * ang.cos(), y + rr * ang.sin());
-    }
     cr.close_path();
     let _ = cr.fill();
 }

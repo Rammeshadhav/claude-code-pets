@@ -68,8 +68,7 @@ This stops the pet and removes its hooks (keeping yours), gives back any status 
 
 - **Live status** from Claude Code hooks: thinking, which tool is running (`reading…`, `editing…`, `running…`), needs your approval, finished, idle and asleep.
 - **One pet for all terminals.** With 2+ sessions, a **session list** under the pet shows each one by its session title, with its status. Sessions that need you come first and are highlighted.
-- **10 built-in pets:** chibi ninjas **Flash** and **Lavender**; the **Crimson Eye**, **Ripple Eye**, **Spiral Orb** and **Rover Miti** (smooth vector art); plus blob, cat, crab and ghost (pixel art).
-- **Your own pets from any picture:** `claude-pet add NAME IMAGE` turns a PNG, JPEG or WebP into a pet, keeping the artwork exactly as it is.
+- **10 built-in pets:** chibi ninjas **Flash** and **Lavender**; the **Crimson Eye**, **Ripple Eye**, **Spiral Orb** and a little **Robot** (smooth vector art); plus blob, cat, crab and ghost (pixel art).
 - **Usage box:** your plan's 5-hour and weekly limits as themed meters (Chakra, Battery or Energy, depending on the pet), showing what's left and when each refills. Turn it on or off whenever you like.
 - **Zero tokens.** The hooks print nothing, so nothing is added to Claude's context.
 - **Never slows Claude down.** Hooks run async, and the pet updates within milliseconds via inotify (no polling).
@@ -87,32 +86,9 @@ This stops the pet and removes its hooks (keeping yours), gives back any status 
 | ♪ / `zzz` | Idle / asleep after 5 minutes | — |
 | Blue number | That many sessions are busy at once | — |
 
-Each pet also changes when Claude needs you. For example, the **Crimson Eye** switches from its blade pattern to three spinning tomoe, the **Ripple Eye** turns red with rings racing outward, the **Spiral Orb** grows spinning wind blades, and the **Rover Miti** rocks back and forth with its status light blinking red (it spins its wheels while working).
+Each pet also changes when Claude needs you. For example, the **Crimson Eye** switches from its blade pattern to three spinning tomoe, the **Ripple Eye** turns red with rings racing outward, the **Spiral Orb** grows spinning wind blades, and the **Robot** rocks back and forth with its status light blinking red (it spins its wheels while working).
 
 The chibi ninjas act out each state too. **Flash** raises a throwing knife while working, and crackles with lightning sparks and waves at you when he needs you. **Lavender** gets little sparkles of focus while working, and blushes, pressing her fingers together, when she needs you. Both grin when Claude is done, and close their eyes when asleep.
-
-### Add your own pet from a picture
-
-```bash
-claude-pet add hero ~/Pictures/my-character.webp --meter Chakra
-claude-pet add mycat ~/Pictures/cat.png
-claude-pet remove mycat
-```
-
-Any PNG, JPEG or WebP works, and your artwork is kept exactly as it is:
-
-- **Plain background** (white, a single color, or already transparent): it's cut out, so the character stands on your desktop like the other pets.
-- **Busy background** (a painted scene): the picture is shown whole as a small rounded portrait card.
-
-The pet then reacts through everything around the picture:
-
-- an aura in the state's color: blue while working, pulsing red when Claude needs you, green when done
-- a gentle breathing motion when idle, and a shake when Claude needs you
-- a colored border on portrait cards
-- twinkling stars when Claude finishes, and dimming when asleep
-- the thought bubble, as with every pet
-
-The usage meter takes its color from the artwork, and `--meter` sets its name (for example `Chakra` or `Mana`; the default is `Energy`). Prepared images live only on your machine in `~/.claude/pet/custom/`; nothing is uploaded or bundled.
 
 ### Usage limits
 
@@ -121,7 +97,7 @@ The usage meter takes its color from the artwork, and `--meter` sets its name (f
 ▦ Chakra · 7d  ▰▰▰▰▰▱▱▱▱▱  45%   ↻ Sun 15:08
 ```
 
-The box under the pet shows how much of your plan's **5-hour** and **weekly** limits is left, like a health bar, with a countdown to when each refills. The meter uses the pet's colour and name (Chakra for the eyes, the orb and the ninjas, Battery for the Miti, Energy for the pixel pets). It turns amber below 40% and pulses red below 15%. Turn it on or off from the right-click menu (**Show usage limits**) or with `claude-pet usage on|off`.
+The box under the pet shows how much of your plan's **5-hour** and **weekly** limits is left, like a health bar, with a countdown to when each refills. The meter uses the pet's colour and name (Chakra for the eyes, the orb and the ninjas, Battery for the Robot, Energy for the pixel pets). It turns amber below 40% and pulses red below 15%. Turn it on or off from the right-click menu (**Show usage limits**) or with `claude-pet usage on|off`.
 
 Claude Code only shares plan usage with status line commands, so the installer registers a small status line that records it. That status line shows the same numbers at the bottom of Claude Code (`5h 82% left (refills 1h 18m) · week 45% left …`). If you already had a status line, it keeps showing exactly as before, and the pet records usage behind it. Usage appears after Claude's first reply in a session and is only available on Pro and Max plans. With a custom status line set, Claude Code hides most of its footer keyboard hints; that's standard Claude Code behavior.
 
@@ -153,8 +129,6 @@ claude-pet species          # list pets
 claude-pet species ripple
 claude-pet size small       # small | medium (default) | large | 0.4–2.0
 claude-pet usage off        # hide / show the usage box
-claude-pet add NAME IMAGE   # make a pet from your own picture (--meter WORD)
-claude-pet remove NAME      # delete an image pet
 ```
 
 Inside Claude Code you can also type `/pet`, `/pet species spiral` and so on. This runs through the model, so it costs a few tokens.
@@ -204,7 +178,6 @@ Claude Code ──hooks (async)──▶ claude-pet hook <state> ──▶ ~/.cl
 | `src/ui.rs` | the GTK window, drawing, session list, menu |
 | `src/pets.rs` | pet artwork (cairo) |
 | `src/chibi.rs` | the chibi characters |
-| `src/custom.rs` | image pets: background removal, cards |
 | `src/usage.rs` | status line → plan usage |
 | `src/hook.rs` | Claude Code hook → session file |
 | `src/state.rs` | session files, config, status text |
@@ -225,9 +198,7 @@ GTK 3 is used deliberately, because GTK 4 removed the always-on-top and window-p
 ## Credits & trademarks
 
 - **Inspiration.** The idea comes from OpenAI's Codex Pets. The Crimson Eye, Ripple Eye and Spiral Orb, and the chibi ninjas Flash and Lavender, are original drawings inspired by the ninja-anime style, especially Masashi Kishimoto's *Naruto*, to whom credit and thanks go for the inspiration. They use their own names and designs, and contain no official artwork, names or symbols. The three-comma tomoe is a traditional Japanese motif.
-- **Rover Miti** is a robot by Rover Robotics, drawn here as a tribute. "Rover Robotics" and "Rover Miti" are their trademarks.
 - **Claude** and **Claude Code** are trademarks of Anthropic, and **Codex** is a trademark of OpenAI. This is an unofficial community project, not affiliated with or endorsed by either.
-- **Your pictures.** The MIT license covers the code only. Pictures you add with `claude-pet add` are yours and never leave your machine; make sure you're allowed to use them.
 
 ## License
 

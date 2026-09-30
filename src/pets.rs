@@ -1,20 +1,18 @@
 //! Pet artwork. Vector pets are balls of radius `r` drawn at (cx, cy); pixel
 //! pets are 12x10 sprites. `t` is the animation tick (about 8.3 per second).
 
-use gtk::cairo::{Context, FontSlant, FontWeight, LinearGradient, LineCap, Matrix, RadialGradient};
+use gtk::cairo::{Context, LinearGradient, LineCap, Matrix, RadialGradient};
 use std::f64::consts::{PI, TAU};
 
-pub const SPECIES: &[&str] = &["blob", "cat", "crab", "ghost", "crimson", "ripple", "spiral", "miti", "flash", "lavender"];
+pub const SPECIES: &[&str] = &["blob", "cat", "crab", "ghost", "crimson", "ripple", "spiral", "robot", "flash", "lavender"];
 
-/// Built-in pets plus the user's image pets.
+/// All pets, as owned strings (for menus and validation).
 pub fn all_species() -> Vec<String> {
-    let mut all: Vec<String> = SPECIES.iter().map(|s| s.to_string()).collect();
-    all.extend(crate::custom::names().into_iter().filter(|n| !SPECIES.contains(&n.as_str())));
-    all
+    SPECIES.iter().map(|s| s.to_string()).collect()
 }
 
 pub fn is_vector(name: &str) -> bool {
-    matches!(name, "crimson" | "ripple" | "spiral" | "miti" | "flash" | "lavender")
+    matches!(name, "crimson" | "ripple" | "spiral" | "robot" | "flash" | "lavender")
 }
 
 type Rgb = (f64, f64, f64);
@@ -26,7 +24,7 @@ pub fn draw_vector(name: &str, cr: &Context, cx: f64, cy: f64, r: f64, t: f64, s
         "crimson" => crimson_eye(cr, cx, cy, r, t, state, asleep),
         "ripple" => ripple_eye(cr, cx, cy, r, t, state, asleep),
         "spiral" => spiral_orb(cr, cx, cy, r, t, state, asleep),
-        "miti" => miti(cr, cx, cy, r, t, state, asleep),
+        "robot" => robot(cr, cx, cy, r, t, state, asleep),
         "flash" => crate::chibi::flash(cr, cx, cy, r, t, state, asleep),
         "lavender" => crate::chibi::lavender(cr, cx, cy, r, t, state, asleep),
         _ => return false,
@@ -329,19 +327,19 @@ fn spiral_orb(cr: &Context, cx: f64, cy: f64, r: f64, t: f64, state: &str, aslee
     glow(cr, cx, cy, r * 0.35, (1.0, 1.0, 1.0), 0.9);
 }
 
-// ---- Rover Miti ------------------------------------------------------------------
+// ---- Robot ---------------------------------------------------------------------
 // An isometric view of the rover. World axes: x = length (front is +x), y = width,
 // z = up, in units of `s`. Visible faces are +x (front), +y (left side) and top.
 
 const COS30: f64 = 0.866_025_403_784_438_6;
-const MITI_L: f64 = 1.2; // chassis length
-const MITI_W: f64 = 1.0; // chassis width
-const MITI_ZB: f64 = 0.12; // chassis bottom
-const MITI_ZT: f64 = 0.6; // chassis top
-const MITI_RW: f64 = 0.36; // wheel radius
-const MITI_TW: f64 = 0.17; // tyre width
-const MITI_WX: f64 = 0.38; // wheel x positions (±)
-const MITI_WY: f64 = MITI_W / 2.0 + 0.03; // inner face of the wheels (±)
+const ROBOT_L: f64 = 1.2; // chassis length
+const ROBOT_W: f64 = 1.0; // chassis width
+const ROBOT_ZB: f64 = 0.12; // chassis bottom
+const ROBOT_ZT: f64 = 0.6; // chassis top
+const ROBOT_RW: f64 = 0.36; // wheel radius
+const ROBOT_TW: f64 = 0.17; // tyre width
+const ROBOT_WX: f64 = 0.38; // wheel x positions (±)
+const ROBOT_WY: f64 = ROBOT_W / 2.0 + 0.03; // inner face of the wheels (±)
 
 struct Iso {
     cx: f64,
@@ -382,8 +380,8 @@ impl Iso {
         for i in 0..7 {
             let f = i as f64 / 6.0;
             save(cr);
-            self.plane(cr, self.p(x, y_inner + MITI_TW * f, MITI_RW), (COS30 * s, 0.5 * s), (0.0, -s));
-            cr.arc(0.0, 0.0, MITI_RW, 0.0, TAU);
+            self.plane(cr, self.p(x, y_inner + ROBOT_TW * f, ROBOT_RW), (COS30 * s, 0.5 * s), (0.0, -s));
+            cr.arc(0.0, 0.0, ROBOT_RW, 0.0, TAU);
             if i < 6 {
                 let shade = 0.52 + 0.14 * f;
                 cr.set_source_rgb(shade, shade, shade + 0.01);
@@ -394,9 +392,9 @@ impl Iso {
                 fill(cr);
                 cr.set_line_width(0.012);
                 cr.set_source_rgb(0.45, 0.45, 0.47);
-                cr.arc(0.0, 0.0, MITI_RW * 0.8, 0.0, TAU);
+                cr.arc(0.0, 0.0, ROBOT_RW * 0.8, 0.0, TAU);
                 stroke(cr);
-                cr.arc(0.0, 0.0, MITI_RW * 0.62, 0.0, TAU);
+                cr.arc(0.0, 0.0, ROBOT_RW * 0.62, 0.0, TAU);
                 cr.set_source_rgb(0.68, 0.68, 0.70);
                 fill(cr);
                 cr.set_source_rgb(0.40, 0.40, 0.43);
@@ -404,8 +402,8 @@ impl Iso {
                 cr.set_line_cap(LineCap::Round);
                 for k in 0..3 {
                     let a = spin + k as f64 * TAU / 3.0;
-                    cr.move_to(MITI_RW * 0.66 * a.cos(), MITI_RW * 0.66 * a.sin());
-                    cr.line_to(MITI_RW * 0.76 * a.cos(), MITI_RW * 0.76 * a.sin());
+                    cr.move_to(ROBOT_RW * 0.66 * a.cos(), ROBOT_RW * 0.66 * a.sin());
+                    cr.line_to(ROBOT_RW * 0.76 * a.cos(), ROBOT_RW * 0.76 * a.sin());
                 }
                 stroke(cr);
             }
@@ -414,11 +412,11 @@ impl Iso {
     }
 }
 
-fn miti(cr: &Context, cx: f64, cy: f64, r: f64, t: f64, state: &str, asleep: bool) {
+fn robot(cr: &Context, cx: f64, cy: f64, r: f64, t: f64, state: &str, asleep: bool) {
     let s = r * 0.95;
     let iso = Iso { cx, oy: cy + 0.5 * s, s }; // wheels rest on the pet's shadow
-    let (l2, w2, bev) = (MITI_L / 2.0, MITI_W / 2.0, 0.07);
-    let zt = MITI_ZT - bev;
+    let (l2, w2, bev) = (ROBOT_L / 2.0, ROBOT_W / 2.0, 0.07);
+    let zt = ROBOT_ZT - bev;
 
     // rocking while it needs you; wheels spin while working
     let waiting = state == "waiting" && !asleep;
@@ -434,37 +432,37 @@ fn miti(cr: &Context, cx: f64, cy: f64, r: f64, t: f64, state: &str, asleep: boo
     }
 
     // far wheels (behind the chassis)
-    for x in [-MITI_WX, MITI_WX] {
-        iso.wheel(cr, x, -MITI_WY - MITI_TW, spin);
+    for x in [-ROBOT_WX, ROBOT_WX] {
+        iso.wheel(cr, x, -ROBOT_WY - ROBOT_TW, spin);
     }
 
     // chassis: left side, front, chamfers, top
-    iso.poly(cr, &[(-l2, w2, MITI_ZB), (l2, w2, MITI_ZB), (l2, w2, zt), (-l2, w2, zt)], (0.20, 0.20, 0.22));
-    iso.poly(cr, &[(l2, w2, MITI_ZB), (l2, -w2, MITI_ZB), (l2, -w2, zt), (l2, w2, zt)], (0.25, 0.25, 0.27));
+    iso.poly(cr, &[(-l2, w2, ROBOT_ZB), (l2, w2, ROBOT_ZB), (l2, w2, zt), (-l2, w2, zt)], (0.20, 0.20, 0.22));
+    iso.poly(cr, &[(l2, w2, ROBOT_ZB), (l2, -w2, ROBOT_ZB), (l2, -w2, zt), (l2, w2, zt)], (0.25, 0.25, 0.27));
     iso.poly(
         cr,
-        &[(-l2, w2, zt), (l2, w2, zt), (l2 - bev, w2 - bev, MITI_ZT), (-l2 + bev, w2 - bev, MITI_ZT)],
+        &[(-l2, w2, zt), (l2, w2, zt), (l2 - bev, w2 - bev, ROBOT_ZT), (-l2 + bev, w2 - bev, ROBOT_ZT)],
         (0.29, 0.29, 0.31),
     );
     iso.poly(
         cr,
-        &[(l2, w2, zt), (l2, -w2, zt), (l2 - bev, -w2 + bev, MITI_ZT), (l2 - bev, w2 - bev, MITI_ZT)],
+        &[(l2, w2, zt), (l2, -w2, zt), (l2 - bev, -w2 + bev, ROBOT_ZT), (l2 - bev, w2 - bev, ROBOT_ZT)],
         (0.33, 0.33, 0.35),
     );
     iso.poly(
         cr,
         &[
-            (-l2 + bev, -w2 + bev, MITI_ZT),
-            (l2 - bev, -w2 + bev, MITI_ZT),
-            (l2 - bev, w2 - bev, MITI_ZT),
-            (-l2 + bev, w2 - bev, MITI_ZT),
+            (-l2 + bev, -w2 + bev, ROBOT_ZT),
+            (l2 - bev, -w2 + bev, ROBOT_ZT),
+            (l2 - bev, w2 - bev, ROBOT_ZT),
+            (-l2 + bev, w2 - bev, ROBOT_ZT),
         ],
         (0.36, 0.36, 0.38),
     );
 
     // top plate, drawn in the top plane: u = x, v = y
     save(cr);
-    iso.plane(cr, iso.p(0.0, 0.0, MITI_ZT), (COS30 * s, 0.5 * s), (-COS30 * s, 0.5 * s));
+    iso.plane(cr, iso.p(0.0, 0.0, ROBOT_ZT), (COS30 * s, 0.5 * s), (-COS30 * s, 0.5 * s));
     let (pl, pw, pr) = (l2 - 0.16, w2 - 0.14, 0.12);
     cr.new_sub_path();
     cr.arc(pl - pr, -pw + pr, pr, -PI / 2.0, 0.0);
@@ -502,16 +500,9 @@ fn miti(cr: &Context, cx: f64, cy: f64, r: f64, t: f64, state: &str, asleep: boo
     }
     restore(cr);
 
-    // front face: name plate and the status light (u = -y, v = -z)
+    // front face: the status light (u = -y, v = -z)
     save(cr);
     iso.plane(cr, iso.p(l2, w2, zt), (COS30 * s, -0.5 * s), (0.0, s));
-    cr.select_font_face("Sans", FontSlant::Italic, FontWeight::Bold);
-    cr.set_font_size(0.13);
-    if let Ok(ext) = cr.text_extents("ROVER ROBOTICS") {
-        cr.move_to((MITI_W - ext.width()) / 2.0 - ext.x_bearing(), 0.2);
-        cr.set_source_rgb(0.12, 0.12, 0.13);
-        let _ = cr.show_text("ROVER ROBOTICS");
-    }
     let led: Rgb = match state {
         "working" => (0.36, 0.62, 1.0),
         "waiting" => (1.0, 0.25, 0.25),
@@ -529,7 +520,7 @@ fn miti(cr: &Context, cx: f64, cy: f64, r: f64, t: f64, state: &str, asleep: boo
             _ => 0.35 + 0.15 * pulse(t, 0.1),
         }
     };
-    let (lx, ly) = (MITI_W / 2.0, 0.3);
+    let (lx, ly) = (ROBOT_W / 2.0, 0.3);
     if on > 0.2 {
         let g = RadialGradient::new(lx, ly, 0.0, lx, ly, 0.3);
         g.add_color_stop_rgba(0.0, led.0, led.1, led.2, 0.7 * on);
@@ -545,8 +536,8 @@ fn miti(cr: &Context, cx: f64, cy: f64, r: f64, t: f64, state: &str, asleep: boo
     restore(cr);
 
     // near wheels (in front of the chassis)
-    for x in [-MITI_WX, MITI_WX] {
-        iso.wheel(cr, x, MITI_WY, spin);
+    for x in [-ROBOT_WX, ROBOT_WX] {
+        iso.wheel(cr, x, ROBOT_WY, spin);
     }
 
     if asleep {
