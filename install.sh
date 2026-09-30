@@ -37,7 +37,7 @@ fi
 say "Copying pet to $PET_DIR"
 mkdir -p "$PET_DIR/sessions" "$CLAUDE_DIR/commands" "$BIN_DIR"
 install -m 755 "$REPO/pet/pet.py" "$REPO/pet/hook.py" "$REPO/pet/statusline.py" "$REPO/pet/pet-ctl" "$PET_DIR/"
-install -m 644 "$REPO/pet/vector_pets.py" "$REPO/pet/custom.py" "$PET_DIR/"
+install -m 644 "$REPO/pet/vector_pets.py" "$PET_DIR/"
 rm -rf "$PET_DIR/__pycache__"
 
 say "Adding /pet command and 'claude-pet' CLI"

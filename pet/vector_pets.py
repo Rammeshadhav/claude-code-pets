@@ -256,15 +256,15 @@ def star(cr, x, y, r, rot):
     cr.close_path()
 
 
-# ---- Rover Miti ----------------------------------------------------------------
+# ---- Robot --------------------------------------------------------------------
 # An isometric view of the rover. World axes: x = length (front is +x), y = width,
 # z = up, in units of `s`. Visible faces are +x (front), +y (left side) and top.
 COS30 = math.cos(math.pi / 6)
-MITI_L, MITI_W = 1.2, 1.0            # chassis length, width
-MITI_ZB, MITI_ZT = 0.12, 0.6         # chassis bottom, top
-MITI_RW, MITI_TW = 0.36, 0.17        # wheel radius, tyre width
-MITI_WX = 0.38                       # wheel x positions (±)
-MITI_WY = MITI_W / 2 + 0.03          # inner face of the wheels (±)
+ROBOT_L, ROBOT_W = 1.2, 1.0            # chassis length, width
+ROBOT_ZB, ROBOT_ZT = 0.12, 0.6         # chassis bottom, top
+ROBOT_RW, ROBOT_TW = 0.36, 0.17        # wheel radius, tyre width
+ROBOT_WX = 0.38                       # wheel x positions (±)
+ROBOT_WY = ROBOT_W / 2 + 0.03          # inner face of the wheels (±)
 
 STATE_LED = {"working": (0.36, 0.62, 1.0), "waiting": (1.0, 0.25, 0.25),
              "done": (0.25, 0.85, 0.45), "idle": (0.85, 0.85, 0.9)}
@@ -275,7 +275,7 @@ def _plane(cr, ox, oy, ux, uy, vx, vy):
     cr.transform(cairo.Matrix(ux, uy, vx, vy, ox, oy))
 
 
-def miti(cr, cx, cy, R, t, state, asleep):
+def robot(cr, cx, cy, R, t, state, asleep):
     s = R * 0.95
     oy0 = cy + 0.5 * s  # wheels rest on the pet's shadow
 
@@ -297,11 +297,11 @@ def miti(cr, cx, cy, R, t, state, asleep):
         """A tyre as a stack of discs from the inner to the outer face."""
         for i in range(7):
             f = i / 6
-            y = y_inner + side * MITI_TW * f
+            y = y_inner + side * ROBOT_TW * f
             cr.save()
-            ox, oy = P(x, y, MITI_RW)
+            ox, oy = P(x, y, ROBOT_RW)
             _plane(cr, ox, oy, COS30 * s, 0.5 * s, 0, -s)  # the wheel's (x, z) plane
-            cr.arc(0, 0, MITI_RW, 0, TAU)
+            cr.arc(0, 0, ROBOT_RW, 0, TAU)
             if i < 6:
                 shade = 0.52 + 0.14 * f
                 cr.set_source_rgb(shade, shade, shade + 0.01)
@@ -311,9 +311,9 @@ def miti(cr, cx, cy, R, t, state, asleep):
                 cr.fill()
                 cr.set_line_width(0.012)
                 cr.set_source_rgb(0.45, 0.45, 0.47)
-                cr.arc(0, 0, MITI_RW * 0.8, 0, TAU)
+                cr.arc(0, 0, ROBOT_RW * 0.8, 0, TAU)
                 cr.stroke()
-                cr.arc(0, 0, MITI_RW * 0.62, 0, TAU)
+                cr.arc(0, 0, ROBOT_RW * 0.62, 0, TAU)
                 cr.set_source_rgb(0.68, 0.68, 0.70)
                 cr.fill()
                 cr.set_source_rgb(0.40, 0.40, 0.43)
@@ -321,16 +321,16 @@ def miti(cr, cx, cy, R, t, state, asleep):
                 cr.set_line_cap(cairo.LINE_CAP_ROUND)
                 for k in range(3):
                     a = spin + k * TAU / 3
-                    cr.move_to(MITI_RW * 0.66 * math.cos(a), MITI_RW * 0.66 * math.sin(a))
-                    cr.line_to(MITI_RW * 0.76 * math.cos(a), MITI_RW * 0.76 * math.sin(a))
+                    cr.move_to(ROBOT_RW * 0.66 * math.cos(a), ROBOT_RW * 0.66 * math.sin(a))
+                    cr.line_to(ROBOT_RW * 0.76 * math.cos(a), ROBOT_RW * 0.76 * math.sin(a))
                 cr.stroke()
             cr.restore()
 
     # far wheels (behind the chassis)
-    for x in (-MITI_WX, MITI_WX):
-        wheel(x, -MITI_WY - MITI_TW, 1)
+    for x in (-ROBOT_WX, ROBOT_WX):
+        wheel(x, -ROBOT_WY - ROBOT_TW, 1)
 
-    L2, W2 = MITI_L / 2, MITI_W / 2
+    L2, W2 = ROBOT_L / 2, ROBOT_W / 2
     bev = 0.07  # chamfer on the top edges
 
     def poly(pts, rgb):
@@ -345,17 +345,17 @@ def miti(cr, cx, cy, R, t, state, asleep):
         cr.stroke()
 
     # chassis: left side, front, chamfers, top
-    zt = MITI_ZT - bev
-    poly([(-L2, W2, MITI_ZB), (L2, W2, MITI_ZB), (L2, W2, zt), (-L2, W2, zt)], (0.20, 0.20, 0.22))
-    poly([(L2, W2, MITI_ZB), (L2, -W2, MITI_ZB), (L2, -W2, zt), (L2, W2, zt)], (0.25, 0.25, 0.27))
-    poly([(-L2, W2, zt), (L2, W2, zt), (L2 - bev, W2 - bev, MITI_ZT), (-L2 + bev, W2 - bev, MITI_ZT)], (0.29, 0.29, 0.31))
-    poly([(L2, W2, zt), (L2, -W2, zt), (L2 - bev, -W2 + bev, MITI_ZT), (L2 - bev, W2 - bev, MITI_ZT)], (0.33, 0.33, 0.35))
-    poly([(-L2 + bev, -W2 + bev, MITI_ZT), (L2 - bev, -W2 + bev, MITI_ZT),
-          (L2 - bev, W2 - bev, MITI_ZT), (-L2 + bev, W2 - bev, MITI_ZT)], (0.36, 0.36, 0.38))
+    zt = ROBOT_ZT - bev
+    poly([(-L2, W2, ROBOT_ZB), (L2, W2, ROBOT_ZB), (L2, W2, zt), (-L2, W2, zt)], (0.20, 0.20, 0.22))
+    poly([(L2, W2, ROBOT_ZB), (L2, -W2, ROBOT_ZB), (L2, -W2, zt), (L2, W2, zt)], (0.25, 0.25, 0.27))
+    poly([(-L2, W2, zt), (L2, W2, zt), (L2 - bev, W2 - bev, ROBOT_ZT), (-L2 + bev, W2 - bev, ROBOT_ZT)], (0.29, 0.29, 0.31))
+    poly([(L2, W2, zt), (L2, -W2, zt), (L2 - bev, -W2 + bev, ROBOT_ZT), (L2 - bev, W2 - bev, ROBOT_ZT)], (0.33, 0.33, 0.35))
+    poly([(-L2 + bev, -W2 + bev, ROBOT_ZT), (L2 - bev, -W2 + bev, ROBOT_ZT),
+          (L2 - bev, W2 - bev, ROBOT_ZT), (-L2 + bev, W2 - bev, ROBOT_ZT)], (0.36, 0.36, 0.38))
 
     # top plate, drawn in the top plane: u = x, v = y
     cr.save()
-    ox, oy = P(0, 0, MITI_ZT)
+    ox, oy = P(0, 0, ROBOT_ZT)
     _plane(cr, ox, oy, COS30 * s, 0.5 * s, -COS30 * s, 0.5 * s)
     pl, pw, pr = L2 - 0.16, W2 - 0.14, 0.12
     cr.new_sub_path()
@@ -394,12 +394,6 @@ def miti(cr, cx, cy, R, t, state, asleep):
     cr.save()
     ox, oy = P(L2, W2, zt)
     _plane(cr, ox, oy, COS30 * s, -0.5 * s, 0, s)
-    cr.select_font_face("Sans", cairo.FONT_SLANT_ITALIC, cairo.FONT_WEIGHT_BOLD)
-    cr.set_font_size(0.13)
-    ext = cr.text_extents("ROVER ROBOTICS")
-    cr.move_to((MITI_W - ext.width) / 2 - ext.x_bearing, 0.2)
-    cr.set_source_rgb(0.12, 0.12, 0.13)
-    cr.show_text("ROVER ROBOTICS")
     led = STATE_LED.get(state, STATE_LED["idle"])
     if asleep:
         on = 0.0
@@ -411,7 +405,7 @@ def miti(cr, cx, cy, R, t, state, asleep):
         on = 1.0
     else:
         on = 0.35 + 0.15 * pulse(t, 0.1)
-    lx, ly = MITI_W / 2, 0.3
+    lx, ly = ROBOT_W / 2, 0.3
     if on > 0.2:
         g = cairo.RadialGradient(lx, ly, 0, lx, ly, 0.3)
         g.add_color_stop_rgba(0, *led, 0.7 * on)
@@ -425,8 +419,8 @@ def miti(cr, cx, cy, R, t, state, asleep):
     cr.restore()
 
     # near wheels (in front of the chassis)
-    for x in (-MITI_WX, MITI_WX):
-        wheel(x, MITI_WY, 1)
+    for x in (-ROBOT_WX, ROBOT_WX):
+        wheel(x, ROBOT_WY, 1)
 
     if asleep:
         cr.pop_group_to_source()
@@ -763,7 +757,7 @@ PETS = {
     "crimson": crimson_eye,
     "ripple": ripple_eye,
     "spiral": spiral_orb,
-    "miti": miti,
+    "robot": robot,
     "flash": flash,
     "lavender": lavender,
 }

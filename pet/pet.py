@@ -32,7 +32,6 @@ from gi.repository import Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 import cairo  # noqa: E402
 
-import custom  # noqa: E402
 import vector_pets  # noqa: E402
 
 PET_DIR = os.path.expanduser("~/.claude/pet")
@@ -64,7 +63,7 @@ USAGE_WINDOWS = (("five_hour", "5h"), ("seven_day", "7d"))
 USAGE_THEME = {
     "crimson": ("Chakra", (0.95, 0.25, 0.25)), "ripple": ("Chakra", (0.68, 0.5, 0.98)),
     "spiral": ("Chakra", (0.35, 0.68, 1.0)), "flash": ("Chakra", (1.0, 0.85, 0.3)),
-    "lavender": ("Chakra", (0.78, 0.68, 0.98)), "miti": ("Battery", (0.36, 0.72, 1.0)),
+    "lavender": ("Chakra", (0.78, 0.68, 0.98)), "robot": ("Battery", (0.36, 0.72, 1.0)),
     "blob": ("Energy", (0.55, 0.88, 0.45)), "cat": ("Energy", (0.98, 0.7, 0.36)),
     "crab": ("Energy", (0.95, 0.5, 0.4)), "ghost": ("Energy", (0.82, 0.78, 0.98)),
 }
@@ -136,8 +135,7 @@ SPECIES = list(SPRITES) + VECTOR_PETS
 
 
 def all_species():
-    """Built-in pets plus the user's image pets."""
-    return SPECIES + [n for n in custom.names() if n not in SPECIES]
+    return list(SPECIES)
 
 FONT = "Ubuntu Sans, Lato, Open Sans, Noto Sans, Sans"
 
@@ -215,7 +213,7 @@ PRIORITY = {"waiting": 3, "working": 2, "done": 1, "idle": 0}
 
 
 RENAMED = {"sharingan": "crimson", "rinnegan": "ripple", "rasengan": "spiral",  # pets renamed in 0.2
-           "minato": "flash", "hinata": "lavender", "pokeball": "blob"}
+           "minato": "flash", "hinata": "lavender", "pokeball": "blob", "miti": "robot"}  # and 0.3
 
 
 def load_config():
@@ -332,7 +330,6 @@ class Pet(Gtk.Window):
         self.layers = {}
         self.usage = []
         self.usage_top = H
-        self.custom = None  # (name, pixbuf, meta) of the current image pet
         self.name = ""
         self.cw, self.ch = W, H  # canvas size (unscaled)
         self.last_active = time.time()
@@ -615,12 +612,6 @@ class Pet(Gtk.Window):
             bob = -abs(math.sin(t * 0.3)) * 4
         else:
             bob = math.sin(t * 0.08) * 2
-
-        if self.custom_pet():
-            self.draw_custom(cr, bob, asleep)
-            if not self.list_mode:
-                self.draw_label(cr)
-            return
 
         if self.species in vector_pets.PETS:
             R = 44
@@ -931,94 +922,9 @@ class Pet(Gtk.Window):
                 cr.fill()
             self.status_dot(cr, rx + 12, ry + rh / 2, state, 3.2)
 
-    # ---- image pets ------------------------------------------------------
-    def custom_pet(self):
-        """(name, pixbuf, meta) if the current species is an image pet; loaded once."""
-        if not self.custom or self.custom[0] != self.species:
-            loaded = custom.load(self.species)
-            self.custom = (self.species, *loaded) if loaded else None
-        return self.custom
-
-    def draw_custom(self, cr, bob, asleep):
-        """Your own artwork, untouched; the state shows in its aura, motion and bubble."""
-        _, pb, meta = self.custom
-        t, state = self.t, self.state
-        card = meta.get("mode") == "card"
-        iw, ih = pb.get_width(), pb.get_height()
-        s = (112 if card else 124) / ih
-        if iw * s > 150:
-            s = 150 / iw
-        w, h = iw * s, ih * s
-        waiting = state == "waiting" and not asleep
-        shake = math.sin(t * 1.3) * 2.5 if waiting else 0
-        breathe = 1 + 0.012 * math.sin(t * 0.08) if state == "idle" and not asleep else 1
-        cx = W / 2 - 14 + shake
-        x, y = cx - w / 2, H - 30 - h + bob
-
-        cr.save()  # shadow
-        cr.translate(W / 2 - 14, H - 28)
-        cr.scale(1, 0.22)
-        cr.arc(0, 0, w * 0.42, 0, 2 * math.pi)
-        cr.restore()
-        cr.set_source_rgba(0, 0, 0, 0.18)
-        cr.fill()
-
-        if not asleep:  # aura in the state's colour (the pet's own colour when idle)
-            rgb, alpha = {
-                "working": ((0.36, 0.62, 1.0), 0.28 + 0.12 * math.sin(t * 0.3)),
-                "waiting": ((1.0, 0.3, 0.3), 0.45 + 0.2 * math.sin(t * 0.6)),
-                "done": ((0.3, 0.9, 0.5), 0.4),
-            }.get(state, (tuple(meta.get("accent", (0.6, 0.6, 0.7))), 0.16))
-            gx, gy, gr = cx, y + h * 0.5, max(w, h) * 0.62
-            g = cairo.RadialGradient(gx, gy, gr * 0.15, gx, gy, gr)
-            g.add_color_stop_rgba(0, *rgb, alpha)
-            g.add_color_stop_rgba(1, *rgb, 0)
-            cr.set_source(g)
-            cr.save()
-            cr.translate(gx, gy)
-            cr.scale(1, h / max(w, h) * 1.05)
-            cr.arc(0, 0, gr, 0, 2 * math.pi)
-            cr.restore()
-            cr.fill()
-
-        cr.save()  # the artwork, breathing gently around its feet
-        cr.translate(x + w / 2, y + h)
-        cr.scale(breathe, breathe)
-        cr.translate(-w / 2, -h)
-        if card:
-            rounded_rect(cr, 0, 0, w, h, 10)
-            cr.clip()
-        cr.scale(s, s)
-        Gdk.cairo_set_source_pixbuf(cr, pb, 0, 0)
-        cr.get_source().set_filter(cairo.FILTER_GOOD)
-        cr.paint_with_alpha(0.5 if asleep else 1.0)
-        cr.restore()
-        if card:
-            bc, ba = {
-                "waiting": ((1.0, 0.35, 0.35), 0.6 + 0.4 * math.sin(t * 0.6)),
-                "working": ((0.45, 0.7, 1.0), 0.9),
-                "done": ((0.35, 0.9, 0.5), 0.9),
-            }.get(state if not asleep else "", ((1, 1, 1), 0.85))
-            rounded_rect(cr, x, y, w, h, 10)
-            cr.set_source_rgba(*bc, ba)
-            cr.set_line_width(2.5)
-            cr.stroke()
-
-        if state == "done" and not asleep:  # finished: a few twinkling stars
-            for k, (fx, fy) in enumerate(((0.1, 0.15), (0.9, 0.3), (0.2, 0.55))):
-                ph = (t * 0.08 + k / 3) % 1
-                vector_pets.star(cr, x + w * fx, y + h * fy - ph * 8, 3.5 * (1 - ph) + 1, 0)
-                cr.set_source_rgba(1.0, 0.9, 0.35, 1 - ph)
-                cr.fill()
-        self.draw_bubble(cr, x + w - 6, y + 10, asleep)
-
     def draw_usage(self, cr, top):
         """Plan usage as themed meters: what's left in the 5-hour and weekly windows."""
-        img = self.custom_pet()
-        if img:
-            term, accent = img[2].get("meter", "Energy"), tuple(img[2].get("accent", (0.55, 0.85, 0.45)))
-        else:
-            term, accent = USAGE_THEME.get(self.species, ("Energy", (0.55, 0.85, 0.45)))
+        term, accent = USAGE_THEME.get(self.species, ("Energy", (0.55, 0.85, 0.45)))
         rows = self.usage
         x0, w = 6, self.cw - 12
         h = USAGE_PAD * 2 + max(1, len(rows)) * USAGE_ROW

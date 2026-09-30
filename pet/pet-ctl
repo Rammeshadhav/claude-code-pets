@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # claude-pet: control the Claude Code desktop pet
 #   start | stop | toggle | status | species [NAME] | size [small|medium|large|0.4-2.0] | usage [on|off]
-#   add NAME IMAGE [--meter WORD] | remove NAME
 PET_DIR="$HOME/.claude/pet"
 
 running() { [ -f "$PET_DIR/pet.pid" ] && kill -0 "$(cat "$PET_DIR/pet.pid")" 2>/dev/null; }
@@ -70,16 +69,5 @@ case "${1:-toggle}" in
     esac
     restart_if_running
     echo "usage box turned $2" ;;
-  add)
-    shift
-    python3 "$PET_DIR/custom.py" add "$@" || exit 1
-    set_config species "\"$1\""
-    restart_if_running
-    echo "your pet is now $1" ;;
-  remove)
-    python3 "$PET_DIR/custom.py" remove "$2" || exit 1
-    if python3 -c "import json,sys; sys.exit(json.load(open('$PET_DIR/config.json')).get('species') != sys.argv[1])" "$2" 2>/dev/null; then
-      set_config species '"blob"'; restart_if_running
-    fi ;;
-  *) echo "usage: claude-pet [start|stop|toggle|status|species [NAME]|size SIZE|usage on|off|add NAME IMAGE|remove NAME]"; exit 1 ;;
+  *) echo "usage: claude-pet [start|stop|toggle|status|species [NAME]|size SIZE|usage on|off]"; exit 1 ;;
 esac
