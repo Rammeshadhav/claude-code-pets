@@ -1,0 +1,27 @@
+[package]
+name = "claude-pet"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.70"
+description = "A tiny animated desktop companion that shows what Claude Code is doing"
+license = "MIT"
+readme = "README.md"
+
+[[bin]]
+name = "claude-pet"
+path = "src/main.rs"
+
+[dependencies]
+# GTK 3: GTK 4 dropped always-on-top and window positioning, which a pet needs
+gtk = "0.18"
+pangocairo = "0.18"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] } # keep settings.json key order
+libc = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
